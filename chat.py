@@ -1,59 +1,74 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-import google.generativeai as gen_ai
+from groq import Groq
 
-# Load the environment variables
+# Load environment variables
 load_dotenv()
 
-# Configure Streamlit page settings
+# Streamlit page settings
 st.set_page_config(
-    page_title="Prep-pro!",
-    page_icon=":brain:",
-    layout="centered",
+    page_title="Chat with Groq!",
+    page_icon="🤖",
+    layout="centered"
 )
 
-# Get the API key from environment
-GOOGLE_API_KEY = os.getenv("API-KEY")
+# Load your Groq API key
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# Set up Google Gemini-Pro AI model
-gen_ai.configure(api_key=GOOGLE_API_KEY)
-model = gen_ai.GenerativeModel('gemini-2.0-flash')  # Adjust based on library version
+# Initialize Groq client
+client = Groq(api_key=GROQ_API_KEY)
 
-# Function to translate roles between Gemini-Pro and Streamlit terminology
-def translate_role_for_streamlit(user_role):
-    if user_role == "model":
-        return "assistant"
-    else:
-        return user_role
+# Supported model (latest)
+MODEL_NAME = "llama-3.3-70b-versatile"
 
-# Initialize chat session in Streamlit if not already present
-if "chat_session" not in st.session_state:
-    st.session_state.chat_session = model.start_chat(history=[])
+# Initialize chat history if not present
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-# Display the chatbot's title on the page
-st.title("🤖 Prep Pro - ChatBot")
+# App title
+st.title("🤖 Groq Llama 3.3 ChatBot")
 
-# Display the chat history
-for message in st.session_state.chat_session.history:
-    with st.chat_message(translate_role_for_streamlit(message.role)):
-        st.markdown(message.parts[0].text)
+# Display previous messages
+for message in st.session_state.history:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Input field for user's message
-user_prompt = st.chat_input("Ask Prep-Pro...")
+# Chat input
+user_prompt = st.chat_input("Ask anything...")
+
 if user_prompt:
+    # Add user message to history
+    st.session_state.history.append({
+        "role": "user",
+        "content": user_prompt
+    })
+
     st.chat_message("user").markdown(user_prompt)
 
     try:
-        # Send user's message to Gemini-Pro and get the response
-        gemini_response = st.session_state.chat_session.send_message(user_prompt)
+        # Send request to Groq API
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in st.session_state.history
+            ],
+            temperature=0.7,
+        )
 
-        # Assuming gemini_response has a `.text` field, if not adjust accordingly
-        response_text = gemini_response.text if hasattr(gemini_response, 'text') else "Sorry, no response received."
-        
-        # Display Gemini-Pro's response
+        # Correct way to extract response content
+        reply = response.choices[0].message.content
+
+        # Save assistant reply to history
+        st.session_state.history.append({
+            "role": "assistant",
+            "content": reply
+        })
+
+        # Display assistant message
         with st.chat_message("assistant"):
-            st.markdown(response_text)
+            st.markdown(reply)
 
     except Exception as e:
         st.error(f"Error: {e}")
