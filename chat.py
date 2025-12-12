@@ -8,7 +8,7 @@ load_dotenv()
 
 # Streamlit page settings
 st.set_page_config(
-    page_title="Chat with Groq!",
+    page_title="Chat with Prep-Pro",
     page_icon="🤖",
     layout="centered"
 )
@@ -27,7 +27,7 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 # App title
-st.title("🤖 Groq Llama 3.3 ChatBot")
+st.title("🤖 Prep-Pro ChatBot")
 
 # Display previous messages
 for message in st.session_state.history:
